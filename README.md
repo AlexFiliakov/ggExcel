@@ -1,2 +1,0 @@
-# ggExcel
-init
