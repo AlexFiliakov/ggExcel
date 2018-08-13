@@ -1,6 +1,6 @@
 # ggExcel
 
-The goal of ggExcel is to ...
+The goal of ggExcel is to push ggplot2 Plots to Microsoft Excel.
 
 ## Installation
 
@@ -14,8 +14,4 @@ devtools::install_github("AlexFiliakov/ggExcel")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-## basic example code
-```
+See usage in **R/BoxPlotIntro.Rmd**
