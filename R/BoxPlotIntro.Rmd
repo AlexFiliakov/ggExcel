@@ -1,24 +1,27 @@
 ---
 title: "Introduction to Box Plots"
 output:
+  md_document:
+    variant: markdown_github
   html_document:
     df_print: paged
 ---
 
 This is an overview of [Box Plots](https://en.wikipedia.org/wiki/Box_plot). 
 
-We begin with an example of sampling form thee *Normal Distribution*:
+## Example: Sampling from the *Normal Distribution*
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-require(tidyverse)
+require(tibble)
 source("viz_helper_funcs.R")
 
 #print("Plotting some intro boxes")
 
 set.seed(123)
-illus.size <- 200
 
-sim.norm <- as.tibble(cbind(Y = rnorm(illus.size)))
+sample.size <- 200
+
+sim.norm <- as.tibble(cbind(Y = rnorm(sample.size)))
 sim.norm$X <- as.factor("Normal")
 
 plot.sim.norm <-
@@ -33,7 +36,7 @@ plot.sim.norm <-
                color = "#ff0000", 
                size = 1) +
   labs(title = "Box Plot", 
-       x = paste(illus.size,"Simulations",sep = " "),
+       x = paste(sample.size,"Simulations",sep = " "),
        y = "") +
   scale_y_continuous(breaks = seq(-3,3,1), 
                      limits = c(-3.25, 3.25)) +

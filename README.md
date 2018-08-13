@@ -14,4 +14,4 @@ devtools::install_github("AlexFiliakov/ggExcel")
 
 ## Example
 
-See usage in **R/BoxPlotIntro.Rmd**
+See usage in [R/BoxPlotIntro.Rmd](/R/BoxPlotIntro.Rmd)

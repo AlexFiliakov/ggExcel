@@ -1,0 +1,14 @@
+base
+ggplot2
+ggExcel
+tidyverse
+tibble
+tidyr
+readr
+purrr
+dplyr
+stringr
+forcats
+shiny
+knitr
+tufte
