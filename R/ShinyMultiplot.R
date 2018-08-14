@@ -1,8 +1,10 @@
+library(dplyr)
 library(shiny)
 library(shinydashboard)
 library(knitr)
 library(tibble)
 library(ggplot2)
+library(GGally)
 
 source("viz_helper_funcs.R")
 
@@ -12,14 +14,6 @@ header <- dashboardHeader(
 
 body <- dashboardBody(
   fluidRow(
-    column(
-      width = 9,
-      box(
-        width = NULL,
-        status = "info",
-        plotOutput("boxplot")
-      )
-    ),
     column(
       width = 3,
       box(
@@ -34,11 +28,16 @@ body <- dashboardBody(
                     selected = "mtcars"
         ),
         uiOutput("in.fields"),
-        sliderInput("sample.size",
-                    "Sample Size:",
-                    min = 1,
-                    max = 500,
-                    value = 200)
+        uiOutput("color.field"),
+        actionButton("update.plot","Update")
+      )
+    ),
+    column(
+      width = 9,
+      box(
+        width = NULL,
+        status = "primary",
+        plotOutput("pairplot")
       )
     )
   )
@@ -51,114 +50,72 @@ ui <- dashboardPage(
   )
 
 
-ui_old <- shinyUI(
-  # Layout Guide for Grid:
-  # https://shiny.rstudio.com/articles/layout-guide.html
-  fluidPage(
-    # Application title
-    titlePanel("Sampling from the Normal Distribution"),
-
-    # Sidebar with a slider input for number of bins
-    sidebarLayout(
-      sidebarPanel(
-        sliderInput("sample.size",
-                    "Sample Size:",
-                    min = 1,
-                    max = 500,
-                    value = 200)
-      ),
-
-      # Show a plot of the generated distribution
-      mainPanel(
-        plotOutput("boxplot")
-      )
-    )
-
-  )
-)
-
 server <- function(input, output) {
   # List fields of the selected dataset
-  output$in.fields <-renderUI({
-    selectInput("in.field",
+  output$in.fields <- renderUI({
+    checkboxGroupInput("in.field.list",
                 "Field to Explore:",
-                choices = colnames(get(input$in.data)),
-                selected = "mtcars"
+                choices = colnames(get(input$in.data))
     )
   })
 
-  # Display the BoxPlotIntro R Markdown
-  output$boxplot <- renderPlot({
-    set.seed(123)
+  output$color.field <- renderUI({
+    selectInput("in.color.field",
+                "Color Field:",
+                choices = colnames(get(input$in.data))
+    )
+  })
 
-    sample.size <- input$sample.size
+  # Display the Pairs Plot
+  get.plot.colnames <- eventReactive(input$update.plot, {
+    input$in.field.list
+  })
 
-    sim.norm <- as.tibble(cbind(Y = rnorm(sample.size)))
-    sim.norm$X <- as.factor("Normal")
+  get.color.field <- eventReactive(input$update.plot, {
+    input$in.color.field
+  })
 
+  dataset.name <- eventReactive(input$update.plot, {
+    input$in.data
+  })
 
+  get.list <- eventReactive(input$update.plot, {
+    get(dataset.name()) %>%
+      select(one_of(c(get.plot.colnames(),get.color.field())))
+  })
 
-    sim.norm <-
-      as.tibble(
-        cbind(
-          Y =
-            get(input$in.data)[[input$in.field]]
-        )
-      )
+  output$pairplot <- renderPlot({
+    showpairs <- get.list()
 
-    sim.norm$X <- as.factor(input$in.field)
-
-    plot.sim.norm <-
-      ggplot(sim.norm, aes(y = Y, x = X)) +
-      #ggplot(get(paste(input$in.data,"$",input$in.field,sep="")), aes(y = Y, x = X)) +
-      geom_boxplot(fatten = 1) +
-      # Add mean as dashed line
-      # stat_summary(fun.y = mean,
-      #              fun.args = list(trim = 0.25),
-      #              geom = "errorbar",
-      #              width = 0.75,
-      #              linetype = "dashed",
-      #              color = "#ff0000",
-      #              size = 1) +
-      labs(title = input$in.data,
-           x = input$in.field,
-           y = "") +
-      #scale_y_continuous(breaks = seq(-3,3,1),
-      #                   limits = c(-3.25, 3.25)) +
-      scale_x_discrete(expand = c(0,0)) +
-      theme_project() +
-      theme(legend.position = "none") +
-      theme(axis.ticks.x = element_blank(),
-            axis.text.x = element_blank())
-
-    #print(plot.sim.norm)
-
-    norm.scatter <- as.tibble(cbind(X = seq(-3.25, 3.25, 0.01)))
-    norm.scatter$Y <- dnorm(norm.scatter$X)
-
-    plot.norm.scatter <-
-      ggplot(norm.scatter, aes(y = Y, x = X)) +
-      geom_line (size = 1.25) +
-      geom_vline(xintercept = qnorm(1/4),
-                 color = "#666666",
-                 linetype = "solid",
-                 size = 1.25) +
-      geom_vline(xintercept = qnorm(3/4),
-                 color = "#666666",
-                 linetype = "solid",
-                 size = 1.25) +
-      labs(title = "Normal PDF",
-           x = "Data Values",
-           y = "Frequency") +
-      scale_x_continuous(breaks = seq(-3,3,1),
-                         limits = c(-3.25,3.25)) +
-      scale_y_continuous(expand = c(0,0), limits = c(0,0.42)) +
-      theme_project() +
-      theme(axis.ticks.x = element_blank(),
-            axis.text.x = element_blank()) +
-      coord_flip()
-
-    multiplot(plot.norm.scatter, plot.sim.norm, cols = 2)
+    for (field in colnames(showpairs)) {
+      if (is.numeric(showpairs[[field]])) {
+        field.size <- length(showpairs[[field]])
+        field.unique.size <-
+          length(as.factor(sort(unique(showpairs[[field]]))))
+        if (field.unique.size < 10 &&
+            field.size / field.unique.size >= 2.0) {
+          showpairs[[field]] <- as.factor(showpairs[[field]])
+        } else {
+          showpairs[[field]] <-
+            cut(showpairs[[field]],
+                min(field.unique.size, 9)
+            )
+        }
+      }
+    }
+    #get.color.field
+    ggpairs(showpairs,
+            columns = get.plot.colnames(),
+            aes_string(colour = get.color.field()),
+            #aes(colour = NULL),
+            title = paste("Dataset:",
+                          dataset.name(),
+                          "; Fields:",
+                          # TODO: make the colnames show up as a list
+                          #       currently just shows first item
+                          get.plot.colnames(),
+                          sep=" "))
+            #title = input$in.data)
   })
 }
 
